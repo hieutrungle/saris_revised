@@ -104,15 +104,15 @@ class Hallway1UEMA(EnvBase):
 
         # Init focal points
         self.init_focals = torch.tensor(
-            [[-5.0, 3.0, 1.5] for _ in range(9)], dtype=torch.float32, device=device
+            [[0.0, 0.0, 1.5] for _ in range(9)], dtype=torch.float32, device=device
         )
         self.init_focals = self.init_focals.unsqueeze(0)
-        self.focal_low = torch.tensor([[[-18.0, -6.0, -4.0] for _ in range(9)]], device=device)
-        self.focal_high = torch.tensor([[[1.0, 10.0, 5.0] for _ in range(9)]], device=device)
+        self.focal_low = torch.tensor([[[-10.0, -8.0, -4.0] for _ in range(9)]], device=device)
+        self.focal_high = torch.tensor([[[9.0, 8.0, 5.0] for _ in range(9)]], device=device)
 
         # Generate symmetric RF positions around 'mid' using 'vector'
-        mid = np.array([2.09223, -3.88804, 2.06059])
-        next_mid = np.array([1.95788, -4.02239, 1.93559])
+        mid = np.array([11.0922, -5.88804, 2.06059])
+        next_mid = np.array([10.9579, -6.02239, 1.93559])
         vector = mid - next_mid
         agent_pos = []
         pos = mid.copy()
@@ -154,8 +154,7 @@ class Hallway1UEMA(EnvBase):
         self._make_spec()
 
         self.rx_polygon_coords = [
-            [(-7.0, -2.4), (-7.0, -4.3), (-14.5, -4.3), (-14.5, -2.4)]
-            for _ in range(self.n_targets)
+            [(2.0, -4.5), (2.0, -6.2), (-6.0, -6.2), (-6.0, -4.5)] for _ in range(self.n_targets)
         ]
         self.tx_positions = torch.tensor(
             sionna_config["tx_positions"], dtype=torch.float32, device=device
