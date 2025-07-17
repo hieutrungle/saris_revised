@@ -118,7 +118,7 @@ class TrainConfig:
 
     # Wandb logging
     wandb_mode: str = "online"  # wandb mode
-    project: str = "RS"  # wandb project name
+    project: str = "saris_revised"  # wandb project name
     group: str = "PPO_raw"  # wandb group name
     name: str = "FirstRun"  # wandb run name
 
