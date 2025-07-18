@@ -416,7 +416,7 @@ class Hallway1UEMA(EnvBase):
         # shape: (1, n_agents, 1)
         rfs = cur_rss[0].unsqueeze(-1)
         prev_rfs = prev_rss[0].unsqueeze(-1)
-        c = 65
+        c = 80
         rfs += c
         prev_rfs += c
         w1 = 1.0
