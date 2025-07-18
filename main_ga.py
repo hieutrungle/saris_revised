@@ -308,7 +308,7 @@ class GAReflectorOptimizer:
 
             if g % 1 == 0:
                 print(
-                    f"G{g:03d}  avg={rec['mean']:.2f};  max={rec['max']:.2f}; best={best.fitness.values[0]:.2f}"
+                    f"G{g:03d}  avg={rec['mean']:.2f};  max={rec['max']:.2f};  best={best.fitness.values[0]:.2f}"
                 )
 
             # Check for improvement and stop if no improvement
@@ -575,8 +575,8 @@ def main(config: TrainConfig):
             generations=20,
             seed=config.seed,
         )
+        pbar = tqdm(total=10)
         for train_idx in range(10):
-            print(f"Training iteration {train_idx}")
             # if config.load_model != "-1":
             #     ga_reflector_optimizer.toolbox.register(
             #         "evaluate", ga_reflector_optimizer._eval, checkpoint["best_focal_point"]
@@ -589,6 +589,8 @@ def main(config: TrainConfig):
             best_focal_point, best_fitness = ga_reflector_optimizer.train(train_idx)
             end_time = time.perf_counter()
             print(f"Training time: {end_time - start_time:.2f} seconds\n")
+            # pbar.set_description(f"best_fitness = {best_fitness}", refresh=False)
+            pbar.update()
         # ga_reflector_optimizer.plot()
 
     except Exception as e:
