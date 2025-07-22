@@ -118,15 +118,25 @@ def generate_scene(args):
         for tile, t, p in zip(tile_group, theta, phi):
             tile.rotation_euler = [0, t, p]
 
+    # 5) Get other names
+    obstacle_names = []
+    for k, v in bpy.data.collections.items():
+        if "Obstacle" in k:
+            obstacle_names.append(k)
+
     # Save files without ceiling
     folder_dir = os.path.join(args.output_dir, f"idx")
     butils.mkdir_with_replacement(folder_dir)
-    butils.save_mitsuba_xml(folder_dir, "scenee", [*reflectors_names, "Wall", "Floor"])
+    butils.save_mitsuba_xml(
+        folder_dir, "scenee", [*reflectors_names, "Wall", "Floor", *obstacle_names]
+    )
 
     # Save files with ceiling
     folder_dir = os.path.join(args.output_dir, f"ceiling_idx")
     butils.mkdir_with_replacement(folder_dir)
-    butils.save_mitsuba_xml(folder_dir, "scenee", [*reflectors_names, "Wall", "Floor", "Ceiling"])
+    butils.save_mitsuba_xml(
+        folder_dir, "scenee", [*reflectors_names, "Wall", "Floor", "Ceiling", *obstacle_names]
+    )
 
 
 def main():

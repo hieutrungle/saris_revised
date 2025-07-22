@@ -408,7 +408,7 @@ def main(config: TrainConfig):
             return_log_prob=True,
         )  # we'll need the log-prob for the PPO loss
 
-        share_parameters_critic = True
+        share_parameters_critic = False
         mappo = True
         critic_net = MultiAgentMLP(
             n_agent_inputs=ob_spec["agents", "observation"].shape[-1],

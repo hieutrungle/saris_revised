@@ -225,7 +225,7 @@ class Hallway1UEMA(EnvBase):
         This function modifies the receiver positions by moving them within a circle of radius 0.2m.
         """
         moved_rx_positions = []
-        for idx, pos in enumerate(self.target_pos.squeeze(0).tolist()):
+        for idx, pos in enumerate(self.target_pos[..., : self.n_targets, :].squeeze(0).tolist()):
             # move the position in 0.2m range using a circle with radius 0.2m
             polygon = Polygon(self.rx_polygon_coords[idx])
             pt = self._generate_moved_rx_positions(pos, polygon)

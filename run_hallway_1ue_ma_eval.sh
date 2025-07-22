@@ -38,7 +38,7 @@ echo Blender directory: $BLENDER_DIR
 echo Coverage map directory: $SOURCE_DIR
 echo -e Assets directory: $ASSETS_DIR '\n'
 
-python ./main_1ue_ma.py --command "train" --env_id "hallway_1ue_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_3_s12311 --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_1ue_ma.yaml --source_dir $SOURCE_DIR --num_envs 4 --group "PPO_Hallway_L" --name "AdvNorm_Hallway_1ue_ma_c80_noshared_params_3" --load_model "/home/hieule/research/saris_revised/local_assets/hallway_1ue_ma_c80_noshared_params_2_s12312/checkpoint_15.pt" --total_episodes 1100 --seed 12311
+python ./main_1ue_ma.py --command "eval" --env_id "hallway_1ue_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_1ue_ma.yaml --source_dir $SOURCE_DIR --num_envs 4 --group "PPO_Hallway_L" --name "AdvNorm_Hallway_1ue_ma_c80_noshared_params_tracking_eval" --load_model "/home/hieule/research/saris_revised/local_assets/hallway_1ue_ma_c80_noshared_params_3_s12311/checkpoint_53.pt" --seed 100 --image_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval/images --ep_len 20
 # --no_compatibility_scores True 
 # --ep_len 2 --frames_per_batch 8 --n_iters 10 --num_epochs 2 --minibatch_size 4 --wandb "offline" --seed 2 --load_model $SOURCE_DIR/test_local_assets/attention_allocator_models_1/checkpoint_2.pt --load_allocator_replay_buffer $SOURCE_DIR/test_local_assets/attention_allocator_models_1/allocator_replay_buffer --load_allocator $SOURCE_DIR/test_local_assets/attention_allocator_models_1/allocator.pt
 # --load_model "/home/hieule/research/rs/local_assets_2/models/checkpoint_1.pt"
