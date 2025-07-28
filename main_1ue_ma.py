@@ -5,7 +5,7 @@ os.environ["TORCHDYNAMO_INLINE_INBUILT_NN_MODULES"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["TF_GPU_ALLOCATOR"] = "cuda_malloc_async"  # to avoid memory fragmentation
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
-os.environ["BATCHED_PIPE_TIMEOUT"] = "200"  # to avoid timeout errors in batched pipe
+os.environ["BATCHED_PIPE_TIMEOUT"] = "1500"  # to avoid timeout errors in batched pipe
 warnings.filterwarnings("ignore", category=UserWarning, module="torchrl")
 
 from torchinfo import summary
@@ -91,6 +91,7 @@ class TrainConfig:
     )
     attention_dim: int = 128  # the dimension of the attention mechanism
     attention_heads: int = 4  # the number of attention heads
+    start_idx: int = 0  # the starting index for the environment and allocator training
 
     # Environment specific arguments
     env_id: str = "wireless-sigmap-v0"  # the environment id of the task
@@ -534,10 +535,16 @@ def train(
     #     entropy_coeff=config.entropy_eps, value_coeff=0.5
     # )
 
-    pbar = tqdm(total=config.n_iters, desc="episode_reward_mean = 0.0")
+    pbar_iterable = range(config.start_idx, config.n_iters)
+    pbar = tqdm(
+        pbar_iterable,
+        total=config.n_iters,
+        desc="episode_reward_mean = 0.0",
+        initial=config.start_idx,
+    )
     GAE = loss_module.value_estimator
     episode_reward_mean_list = []
-    for idx, tensordict_data in enumerate(collector):
+    for idx, tensordict_data in enumerate(collector, start=config.start_idx):
 
         # We need to expand the done and terminated to match the reward shape (this is expected by the value estimator)
         # Agents
