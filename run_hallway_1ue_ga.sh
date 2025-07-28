@@ -38,9 +38,10 @@ echo Blender directory: $BLENDER_DIR
 echo Coverage map directory: $SOURCE_DIR
 echo -e Assets directory: $ASSETS_DIR '\n'
 
-python ./main_ga.py --command "train" --env_id "hallway_1ue_ga" --checkpoint_dir $SOURCE_DIR/test_local_assets/hallway_1ue_ga --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_1ue_ma.yaml --source_dir $SOURCE_DIR --num_envs 3 --group "PPO_Hallway_L" --name "AdvNorm_Hallway_1ue_ga" --wandb "offline" --seed 10
-# -ep_len 2 --frames_per_batch 4 --n_iters 10 --num_epochs 2 --minibatch_size 4 --wandb "offline" --seed 2  --no_allocator True
-# --no_compatibility_scores True 
-# --ep_len 2 --frames_per_batch 8 --n_iters 10 --num_epochs 2 --minibatch_size 4 --wandb "offline" --seed 2 --load_model $SOURCE_DIR/test_local_assets/attention_allocator_models_1/checkpoint_2.pt --load_allocator_replay_buffer $SOURCE_DIR/test_local_assets/attention_allocator_models_1/allocator_replay_buffer --load_allocator $SOURCE_DIR/test_local_assets/attention_allocator_models_1/allocator.pt
-# --load_model "/home/hieule/research/rs/local_assets_2/models/checkpoint_1.pt"
-# python ./main.py --command "eval" --checkpoint_dir "/home/hieule/research/rs/local_assets/models" --sionna_config_file "/home/hieule/research/rs/configs/sionna_shared_ap.yaml" --replay_buffer_dir "/home/hieule/research/rs/local_assets/replay_buffer" --wandb "offline" --num_envs 1
+python ./main_ga.py --command "train" --env_id "hallway_1ue_ga" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ga_ --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_1ue_ma.yaml --source_dir $SOURCE_DIR --num_envs 3 --group "PPO_Hallway_L" --name "hallway_ga" --wandb "offline" --drl_eval_results_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval-20250722T045133Z-1-001/hallway_1ue_ma_c80_noshared_params_tracking_eval/env_rollout_images.pt
+
+python ./main_ga.py --command "train" --env_id "hallway_1ue_ga" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ga_small --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_ma_small.yaml --source_dir $SOURCE_DIR --num_envs 3 --group "PPO_Hallway_L" --name "hallway_ga" --wandb "offline" --drl_eval_results_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval-20250722T045133Z-1-001/hallway_1ue_ma_c80_noshared_params_tracking_eval/env_rollout_images.pt
+
+python ./main_ga.py --command "train" --env_id "hallway_1ue_ga" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ga_mid --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_ma_mid.yaml --source_dir $SOURCE_DIR --num_envs 3 --group "PPO_Hallway_L" --name "hallway_ga" --wandb "offline" --drl_eval_results_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval-20250722T045133Z-1-001/hallway_1ue_ma_c80_noshared_params_tracking_eval/env_rollout_images.pt
+
+python ./main_ga.py --command "train" --env_id "hallway_1ue_ga" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_1ue_ga_big --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_ma_big.yaml --source_dir $SOURCE_DIR --num_envs 3 --group "PPO_Hallway_L" --name "hallway_ga" --wandb "offline" --drl_eval_results_dir $SOURCE_DIR/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval-20250722T045133Z-1-001/hallway_1ue_ma_c80_noshared_params_tracking_eval/env_rollout_images.pt
