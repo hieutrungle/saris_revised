@@ -84,6 +84,7 @@ class Hallway1UEGA(EnvBase):
         no_compatibility_scores: bool = False,
         num_runs_before_restart: int = 10,
         eval_mode: bool = False,
+        rx_positions: Optional[list] = None,
     ):
 
         super().__init__(device=device, batch_size=[1])
@@ -101,6 +102,7 @@ class Hallway1UEGA(EnvBase):
         self.random_assignment = random_assignment
         self.no_allocator = no_allocator
         self.no_compatibility_scores = no_compatibility_scores
+        self.rx_positions = rx_positions
 
         # Init focal points
         self.init_focals = torch.tensor(
@@ -172,6 +174,8 @@ class Hallway1UEGA(EnvBase):
             self.n_agents, self.n_targets, dtype=torch.bool, device=device
         )
         self.allocator_reward_const = 0.0
+
+        self.counter = 0
 
     def _get_ob(self, tensordict: TensorDictBase) -> TensorDictBase:
 
@@ -264,12 +268,15 @@ class Hallway1UEGA(EnvBase):
 
         # Initialize the receiver positions
         sionna_config = copy.deepcopy(self.default_sionna_config)
-        if self.focals is None or not self.eval_mode:
-            rx_positions = self._prepare_rx_positions()
+        if self.rx_positions is None:
+            if self.focals is None or not self.eval_mode:
+                rx_positions = self._prepare_rx_positions()
+            else:
+                rx_positions = self._move_rx_positions()
         else:
-            rx_positions = self._move_rx_positions()
+            rx_positions = self.rx_positions[self.counter].clone().detach().cpu().numpy().tolist()
+        self.counter += 1
         print(f"Receiver positions: {rx_positions}")
-        # TODO: use the same rx_positions for all envs
         sionna_config["rx_positions"] = rx_positions
         # Initialize the environment using the Sionna configuration
         if self.focals is None:
