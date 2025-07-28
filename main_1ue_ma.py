@@ -25,7 +25,7 @@ torch.multiprocessing.set_start_method("forkserver", force=True)
 from torchrl.envs import ParallelEnv, EnvBase, SerialEnv
 import gc
 from rs.utils import pytorch_utils, utils
-from rs.envs import env_ids
+from rs.envs import ENV_IDS
 from rs.modules.agents import allocation, attention_critics, maac_critic
 
 # Tensordict modules
@@ -279,8 +279,8 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
         else:
             sionna_config["rendering"] = True
 
-        if config.env_id.lower() == "hallway_1ue_ma":
-            env_cls = env_ids["hallway_1ue_ma"]
+        if config.env_id.lower() in ENV_IDS:
+            env_cls = ENV_IDS[config.env_id.lower()]
         else:
             raise ValueError(f"Unknown environment id: {config.env_id}")
 
