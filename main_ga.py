@@ -81,6 +81,7 @@ class TrainConfig:
     )
     attention_dim: int = 128  # the dimension of the attention mechanism
     attention_heads: int = 4  # the number of attention heads
+    drl_eval_results_dir: str = "-1"  # the path to save the DRL evaluation results
 
     # Environment specific arguments
     env_id: str = "wireless-sigmap-v0"  # the environment id of the task
@@ -482,6 +483,15 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
         else:
             sionna_config["rendering"] = True
 
+        # results = torch.load(
+        #     "/home/hieule/research/saris_revised/local_assets/hallway_1ue_ma_c80_noshared_params_tracking_eval-20250722T045133Z-1-001/hallway_1ue_ma_c80_noshared_params_tracking_eval/env_rollout_images.pt",
+        #     weights_only=False,
+        # )
+        results = torch.load(config.drl_eval_results_dir, weights_only=False)
+        target_pos = results["agents", "target_pos"]
+        rx_positions = target_pos[0, 0, :, :3, :]
+        rx_positions = rx_positions[::20, ...]
+
         if config.env_id.lower() not in env_ids:
             raise ValueError(f"Unknown environment id: {config.env_id}")
         env_cls = env_ids[config.env_id.lower()]
@@ -494,6 +504,7 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
             "random_assignment": config.random_assignment,
             "no_allocator": config.no_allocator,
             "no_compatibility_scores": config.no_compatibility_scores,
+            "rx_positions": rx_positions,
         }
 
         if config.command.lower() == "eval":
@@ -571,12 +582,12 @@ def main(config: TrainConfig):
             config=config,
             bounds=bounds,  # Example bounds for x, y, z
             envs=envs,
-            population=config.num_envs * 15,
+            population=config.num_envs * 20,
             generations=20,
             seed=config.seed,
         )
-        pbar = tqdm(total=10)
-        for train_idx in range(10):
+        pbar = tqdm(total=21)
+        for train_idx in range(21):
             # if config.load_model != "-1":
             #     ga_reflector_optimizer.toolbox.register(
             #         "evaluate", ga_reflector_optimizer._eval, checkpoint["best_focal_point"]
