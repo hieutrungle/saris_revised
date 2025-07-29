@@ -430,7 +430,7 @@ class HallwayFocusMA(EnvBase):
         w1 = 1.0
         w2 = 0.1
         rfs_diff = rfs - prev_rfs
-        agents_reward = 1 / 20 * (w1 * rfs + w2 * rfs_diff)
+        agents_reward = 1 / 30 * (w1 * rfs + w2 * rfs_diff)
 
         return {"agents_reward": agents_reward}
 
