@@ -104,7 +104,7 @@ class HallwayFocusMA(EnvBase):
 
         # Init focal points
         self.init_focals = torch.tensor(
-            [[3.37398, -4.75316, 1.5] for _ in range(9)], dtype=torch.float32, device=device
+            [[-0.510459, -5.35608, 1.5] for _ in range(9)], dtype=torch.float32, device=device
         )
         self.init_focals = self.init_focals.unsqueeze(0)
         self.focal_low = torch.tensor([[[-10.0, -8.0, -4.0] for _ in range(9)]], device=device)
