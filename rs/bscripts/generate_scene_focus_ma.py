@@ -130,6 +130,14 @@ def generate_scene(args):
     }
     reflectors_names = sorted(reflectors.keys())
 
+    # focals_viz = {
+    #     k: sorted(v.objects, key=lambda x: x.name)
+    #     for k, v in bpy.data.collections.items()
+    #     if "Focal" in k
+    # }
+    # focals_viz_names = sorted(focals_viz.keys())
+    # focals_viz = focals_viz[focals_viz_names[0]]
+
     # 4) Change orientation of reflector tiles using vectorized approach
     reflector = reflectors[reflectors_names[0]]
     # There are 9 groups of tiles in reflector, e.g. Group01.001, Group01.002, ..., Group01.009, Group02.001, ..., Group02.009
@@ -139,6 +147,12 @@ def generate_scene(args):
         [tile for tile in reflector if tile.name.startswith(f"Group{str(i).zfill(2)}")]
         for i in range(1, 10)
     ]
+
+    # for f_viz, focal in zip(focals_viz, focals):
+    #     # Set the location of the focal point visualizer
+    #     f_viz.location = Vector(focal[3:])
+    #     # Set the name of the focal point visualizer
+    #     # f_viz.name = f"Focal_{focal[3]:.2f}"
 
     for i, (tile_group, focal) in enumerate(zip(tile_groups, focals)):
         # Get the center of each tile in the group
@@ -162,6 +176,11 @@ def generate_scene(args):
     butils.save_mitsuba_xml(
         folder_dir, "scenee", [*reflectors_names, "Wall", "Floor", *obstacle_names]
     )
+    # butils.save_mitsuba_xml(
+    #     folder_dir,
+    #     "scenee",
+    #     [*reflectors_names, "Wall", "Floor", *obstacle_names, *focals_viz_names],
+    # )
 
     # Save files with ceiling
     folder_dir = os.path.join(args.output_dir, f"ceiling_idx")

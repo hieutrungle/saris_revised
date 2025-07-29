@@ -287,7 +287,9 @@ class HallwayFocusMA(EnvBase):
         if self.focals is None or not self.eval_mode:
             # Randomly initialize focal points
             delta_focals = torch.randn_like(self.init_focals)
-            delta_focals[..., :2] = delta_focals[..., :2] * 1.5  # Scale x and y by 1.5
+            delta_focals[..., 0] = delta_focals[..., 0] * 1.4
+            delta_focals[..., 1] = delta_focals[..., 1] * 0.3
+            delta_focals[..., 2] = delta_focals[..., 2] * 0.4
             focals = self.init_focals + delta_focals
         else:
             focals = self.focals
