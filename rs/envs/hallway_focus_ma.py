@@ -107,8 +107,8 @@ class HallwayFocusMA(EnvBase):
             [[-0.510459, -5.35608, 1.5] for _ in range(9)], dtype=torch.float32, device=device
         )
         self.init_focals = self.init_focals.unsqueeze(0)
-        self.focal_low = torch.tensor([[[-10.0, -8.0, -4.0] for _ in range(9)]], device=device)
-        self.focal_high = torch.tensor([[[9.0, 1.0, 5.0] for _ in range(9)]], device=device)
+        self.focal_low = torch.tensor([[[-12.0, -11.0, -4.0] for _ in range(9)]], device=device)
+        self.focal_high = torch.tensor([[[9.0, 0.0, 5.0] for _ in range(9)]], device=device)
         # self.focal_low = torch.tensor([[[-10.0, -20.0, -4.0] for _ in range(9)]], device=device)
         # self.focal_high = torch.tensor([[[9.0, 20.0, 5.0] for _ in range(9)]], device=device)
 
@@ -330,7 +330,7 @@ class HallwayFocusMA(EnvBase):
 
         # tensordict  contains the current state of the environment and the action taken
         # by the agent.
-        delta_focals = tensordict["agents", "action"] * 0.6  # Scale the action by 0.6
+        delta_focals = tensordict["agents", "action"] * 0.4  # Scale the action by 0.4
         self.focals = self.focals + delta_focals
 
         # if the z values of any focal point is at the boundary of low and high, terminated = True
@@ -422,13 +422,13 @@ class HallwayFocusMA(EnvBase):
         # shape: (1, n_agents, 1)
         rfs = cur_rss[0].unsqueeze(-1)
         prev_rfs = prev_rss[0].unsqueeze(-1)
-        c = 80
+        c = 60
         rfs += c
         prev_rfs += c
         w1 = 1.0
         w2 = 0.1
         rfs_diff = rfs - prev_rfs
-        agents_reward = 1 / 30 * (w1 * rfs + w2 * rfs_diff)
+        agents_reward = 1 / 20 * (w1 * rfs + w2 * rfs_diff)
 
         return {"agents_reward": agents_reward}
 
