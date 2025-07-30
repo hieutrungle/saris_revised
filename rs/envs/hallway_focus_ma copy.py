@@ -101,27 +101,42 @@ class HallwayFocusMA(EnvBase):
         self.random_assignment = random_assignment
         self.no_allocator = no_allocator
         self.no_compatibility_scores = no_compatibility_scores
-        self.n_targets = len(sionna_config["rx_positions"])
 
         # Init focal points
         self.init_focals = torch.tensor(
-            [[-0.510459, -5.35608, 1.5] for _ in range(self.n_targets)],
-            dtype=torch.float32,
-            device=device,
+            [[-0.510459, -5.35608, 1.5] for _ in range(9)], dtype=torch.float32, device=device
         )
         self.init_focals = self.init_focals.unsqueeze(0)
-        self.focal_low = torch.tensor(
-            [[[-12.0, -11.0, -4.0] for _ in range(self.n_targets)]], device=device
-        )
-        self.focal_high = torch.tensor(
-            [[[9.0, 0.0, 5.0] for _ in range(self.n_targets)]], device=device
-        )
+        self.focal_low = torch.tensor([[[-12.0, -11.0, -4.0] for _ in range(9)]], device=device)
+        self.focal_high = torch.tensor([[[9.0, 0.0, 5.0] for _ in range(9)]], device=device)
+        # self.focal_low = torch.tensor([[[-10.0, -20.0, -4.0] for _ in range(9)]], device=device)
+        # self.focal_high = torch.tensor([[[9.0, 20.0, 5.0] for _ in range(9)]], device=device)
 
         # Generate symmetric RF positions around 'mid' using 'vector'
-        agent_pos = torch.tensor(
-            sionna_config["rf_positions"], dtype=torch.float32, device=device
-        ).unsqueeze(0)
-        self.n_agents = agent_pos.shape[1]
+        mid = np.array([11.0922, -5.88804, 2.06059])
+        next_mid = np.array([10.9579, -6.02239, 1.93559])
+        vector = mid - next_mid
+        agent_pos = []
+        pos = mid.copy()
+        vec = -vector
+        for i in range(4):
+            vec[2] *= -1
+            pos = pos - vec
+            agent_pos.append(pos)
+        agent_pos.reverse()
+        pos = mid.copy()
+        agent_pos.append(pos)
+        vec = vector
+        vec[2] *= -1
+        for i in range(4):
+            vec[2] *= -1
+            pos = pos - vec
+            agent_pos.append(pos)
+        agent_pos = np.array(agent_pos, dtype=np.float32)
+        agent_pos = torch.tensor(agent_pos, device=device).unsqueeze(0)
+
+        self.n_agents = int(9)
+        self.n_targets = len(sionna_config["rx_positions"])
 
         # ob: (rx_x, rx_y, rx_z, rf_x, rf_y, rf_z, fp_x, fp_y, fp_z) * num_agents
         tmp_observation = torch.cat([agent_pos.clone(), agent_pos, self.init_focals], dim=-1)
@@ -282,7 +297,7 @@ class HallwayFocusMA(EnvBase):
         self.init_agent_focals = self.focals.clone()
 
         # Assign rx to each agent
-        self.selected_loc_indices = [0, 1, 2]
+        self.selected_loc_indices = [0, 1, 2, 0, 1, 2, 0, 1, 2]
         self.target_pos = torch.tensor(
             [rx_positions[i] for i in self.selected_loc_indices],
             dtype=torch.float32,
@@ -396,29 +411,27 @@ class HallwayFocusMA(EnvBase):
 
         cur_rss = copy.deepcopy(cur_rss)
         prev_rss = copy.deepcopy(prev_rss)
-
-        loc_idx = self.selected_loc_indices  # shape: (num_rf,)
-        rf_idx = torch.arange(self.n_agents, device=cur_rss.device)
-        cur_rss = cur_rss[:, rf_idx, loc_idx]
-        prev_rss = prev_rss[:, rf_idx, loc_idx]
-
-        rfs = cur_rss * self.factors
-        prev_rfs = prev_rss * self.factors
-        rfs = rfs.unsqueeze(-1)  # shape: (1, n_agents, 1)
-        prev_rfs = prev_rfs.unsqueeze(-1)  # shape: (1, n_agents, 1)
+        cur_rss = torch.cat([cur_rss, cur_rss, cur_rss], dim=-1)
+        prev_rss = torch.cat([prev_rss, prev_rss, prev_rss], dim=-1)
+        cur_rss = cur_rss * self.factors.unsqueeze(0)
+        prev_rss = prev_rss * self.factors.unsqueeze(0)
 
         # Convert to dBm
-        rfs = 10 * torch.log10(rfs) + 30.0
-        prev_rfs = 10 * torch.log10(prev_rfs) + 30.0
+        cur_rss = 10 * torch.log10(cur_rss) + 30.0
+        prev_rss = 10 * torch.log10(prev_rss) + 30.0
 
         # Reward Engineering
-        c = 70
+        # shape: (1, n_agents, 1)
+        rfs = cur_rss[0].unsqueeze(-1)
+        prev_rfs = prev_rss[0].unsqueeze(-1)
+        c = 60
         rfs += c
         prev_rfs += c
         w1 = 1.0
         w2 = 0.1
         rfs_diff = rfs - prev_rfs
         agents_reward = 1 / 30 * (w1 * rfs + w2 * rfs_diff)
+
         return {"agents_reward": agents_reward}
 
     def _make_spec(self):

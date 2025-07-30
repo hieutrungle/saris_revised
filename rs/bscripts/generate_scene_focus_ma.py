@@ -147,6 +147,8 @@ def generate_scene(args):
         [tile for tile in reflector if tile.name.startswith(f"Group{str(i).zfill(2)}")]
         for i in range(1, 10)
     ]
+    # merge tiles groups (0, 3, 6), (1, 4, 7), (2, 5, 8)
+    tile_groups = [tile_groups[i] + tile_groups[i + 3] + tile_groups[i + 6] for i in range(3)]
 
     # for f_viz, focal in zip(focals_viz, focals):
     #     # Set the location of the focal point visualizer
