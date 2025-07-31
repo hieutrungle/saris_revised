@@ -4,7 +4,7 @@ scene_name: hallway_L_r5
 blender_app: "/home/hieule/blender/blender-3.3.14-linux-x64/blender"
 blender_dir: "/home/hieule/blender/"
 xml_dir: "/home/hieule/research/saris_revised/local_assets/blender"
-blender_script: "/home/hieule/research/saris_revised/rs/bscripts/generate_scene_1ue_ma.py"
+blender_script: "/home/hieule/research/saris_revised/rs/bscripts/generate_scene_focus_ma.py"
 image_dir: "/home/hieule/research/saris_revised/local_assets/images"
 
 resolution: [1920, 1080]
