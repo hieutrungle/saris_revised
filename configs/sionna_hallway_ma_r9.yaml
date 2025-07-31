@@ -1,5 +1,5 @@
 base_config: hallway
-scene_name: hallway_mid
+scene_name: hallway_L_r9
 
 blender_app: "/home/hieule/blender/blender-3.3.14-linux-x64/blender"
 blender_dir: "/home/hieule/blender/"

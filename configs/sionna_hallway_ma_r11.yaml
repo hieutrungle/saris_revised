@@ -1,5 +1,5 @@
 base_config: hallway
-scene_name: hallway_small
+scene_name: hallway_L_r11
 
 blender_app: "/home/hieule/blender/blender-3.3.14-linux-x64/blender"
 blender_dir: "/home/hieule/blender/"
@@ -18,7 +18,7 @@ frequency: 60e9
 synthetic_array: true
 
 # RIS parameters
-rf_positions: [[11.0922, -5.88804, 2.31059]]
+rf_positions: [[11.0922, -5.88804, 1.56059]]
 
 # Transmitter and receiver parameters
 tx_power_dbm: 5.0
