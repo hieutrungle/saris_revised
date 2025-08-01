@@ -153,7 +153,7 @@ class GAReflectorOptimizer:
         c1[:] = child1
         c2[:] = child2
         # print(f"Final c1: {c1}, c2: {c2}\n")
-        return c1, c2
+        return copy.deepcopy(c1), copy.deepcopy(c2)
 
     def _gauss_mut(self, ind, sigma_ratio=0.1, indpb=0.20):
         # print(f"\nBefore mutation: {ind}")
@@ -163,7 +163,7 @@ class GAReflectorOptimizer:
         mutant[mask] += np.random.normal(0.0, widths[mask])
         np.clip(mutant, self.low_bnd, self.high_bnd, out=mutant)
         # print(f"After mutation: {mutant}")
-        return (mutant,)
+        return (copy.deepcopy(mutant),)
 
     # -----------------------------------------------------------------------
     def train(self, train_idx: int = 0) -> Tuple["creator.Individual", float]:
@@ -185,7 +185,7 @@ class GAReflectorOptimizer:
             self.evaluate_invalid_individuals(rss, offspring)
 
             # pop = list(map(self.toolbox.clone, self.toolbox.select(offspring, len(pop))))
-            pop[:] = offspring
+            pop[:] = copy.deepcopy(offspring)
             self.hof.update(pop)
             best = self.hof[0]
 
