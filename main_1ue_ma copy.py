@@ -66,14 +66,11 @@ from tqdm import tqdm
 
 set_composite_lp_aggregate(False).set()
 
-from rs.run_ga import run_ga
-
 
 @dataclass
 class TrainConfig:
 
     # General arguments
-    algo: str = "drl"  # the algorithm to run
     command: str = "train"  # the command to run
     load_model: str = "-1"  # Model load file name for resume training, "-1" doesn't load
     load_eval_model: str = "-1"  # Model load file name for evaluation, "-1" doesn't load
@@ -95,7 +92,6 @@ class TrainConfig:
     attention_dim: int = 128  # the dimension of the attention mechanism
     attention_heads: int = 4  # the number of attention heads
     start_idx: int = 0  # the starting index for the environment and allocator training
-    drl_eval_results_dir: str = "-1"  # the path to save the DRL evaluation results
 
     # Environment specific arguments
     env_id: str = "wireless-sigmap-v0"  # the environment id of the task
@@ -137,10 +133,6 @@ class TrainConfig:
             raise ValueError("Source dir is required for training")
         if self.checkpoint_dir == "-1":
             raise ValueError("Checkpoints dir is required for training")
-        if self.algo.lower() == "ga" and self.drl_eval_results_dir == "-1":
-            raise ValueError(
-                "DRL evaluation results dir (--drl_eval_results_dir) is required for GA ALgorithm"
-            )
         if self.sionna_config_file == "-1":
             raise ValueError("Sionna config file is required for training")
         if self.allocator_replay_buffer_dir == "-1":
@@ -288,32 +280,34 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
         else:
             sionna_config["rendering"] = True
 
-        env_kwargs = {
-            "sionna_config": sionna_config,
-            "allocator_path": config.allocator_path,
-            "seed": config.seed,
-            "device": config.device,
-            "num_runs_before_restart": 20,
-            "random_assignment": config.random_assignment,
-            "no_allocator": config.no_allocator,
-            "no_compatibility_scores": config.no_compatibility_scores,
-        }
-
-        if config.algo.lower() == "ga":
-            results = torch.load(config.drl_eval_results_dir, weights_only=False)
-            target_pos = results["agents", "target_pos"]
-            rx_positions = target_pos[0, 0, :, :3, :]
-            rx_positions = rx_positions[::20, ...]
-            env_kwargs["rx_positions"] = rx_positions
-
-        if config.command.lower() == "eval":
-            env_kwargs["eval_mode"] = True
-            env_kwargs["seed"] = config.eval_seed
-
-        if config.env_id.lower() not in ENV_IDS:
+        if config.env_id.lower() in ENV_IDS:
+            env_cls = ENV_IDS[config.env_id.lower()]
+        else:
             raise ValueError(f"Unknown environment id: {config.env_id}")
-        env_cls = ENV_IDS[config.env_id.lower()]
-        env = env_cls(**env_kwargs)
+
+        if config.command.lower() == "train":
+            env = env_cls(
+                sionna_config,
+                allocator_path=config.allocator_path,
+                seed=config.seed + idx,
+                device=config.device,
+                num_runs_before_restart=20,
+                random_assignment=config.random_assignment,
+                no_allocator=config.no_allocator,
+                no_compatibility_scores=config.no_compatibility_scores,
+            )
+        elif config.command.lower() == "eval":
+            env = env_cls(
+                sionna_config,
+                allocator_path=config.allocator_path,
+                seed=config.eval_seed + idx,
+                device=config.device,
+                num_runs_before_restart=20,
+                eval_mode=True,
+                random_assignment=config.random_assignment,
+                no_allocator=config.no_allocator,
+                no_compatibility_scores=config.no_compatibility_scores,
+            )
 
         return env
 
@@ -335,15 +329,15 @@ def main(config: TrainConfig):
     torch.multiprocessing.set_start_method("forkserver", force=True)
     pytorch_utils.init_seed(config.seed)
 
-    envs = SerialEnv(config.num_envs, [make_env(config, idx) for idx in range(config.num_envs)])
+    # envs = SerialEnv(config.num_envs, [make_env(config, idx) for idx in range(config.num_envs)])
     # check_env_specs(envs)
 
-    # envs = ParallelEnv(
-    #     config.num_envs,
-    #     [make_env(config, idx) for idx in range(config.num_envs)],
-    #     mp_start_method="forkserver",
-    #     shared_memory=False,
-    # )
+    envs = ParallelEnv(
+        config.num_envs,
+        [make_env(config, idx) for idx in range(config.num_envs)],
+        mp_start_method="forkserver",
+        shared_memory=False,
+    )
     ob_spec = envs.observation_spec
     ac_spec = envs.action_spec
 
@@ -351,20 +345,9 @@ def main(config: TrainConfig):
     loc = torch.zeros(observation_shape, device=config.device)
     scale = torch.ones(observation_shape, device=config.device) * 8.0
 
-    if config.algo.lower() == "ga":
-        compose = Compose(
-            ObservationNorm(
-                loc=loc,
-                scale=scale,
-                in_keys=[("agents", "observation")],
-                out_keys=[("agents", "observation")],
-                standard_normal=True,
-            ),
-            DoubleToFloat(),
-            RewardSum(in_keys=[("agents", "reward")], out_keys=[("agents", "episode_reward")]),
-        )
-    else:
-        compose = Compose(
+    envs = TransformedEnv(
+        envs,
+        Compose(
             ObservationNorm(
                 loc=loc,
                 scale=scale,
@@ -375,28 +358,15 @@ def main(config: TrainConfig):
             DoubleToFloat(),
             StepCounter(max_steps=config.ep_len),
             RewardSum(in_keys=[("agents", "reward")], out_keys=[("agents", "episode_reward")]),
-        )
-
-    envs = TransformedEnv(envs, compose)
+        ),
+    )
 
     if loc is None and scale is None:
         envs.transform[0].init_stats(num_iter=config.ep_len * 3, reduce_dim=(0, 1, 2), cat_dim=1)
 
-    if config.algo.lower() == "drl":
-        run_drl(envs, config)
-    elif config.algo.lower() == "ga":
-        run_ga(envs, config)
-    else:
-        raise ValueError(f"Unknown algorithm: {config.algo}. Supported: 'drl', 'ga'.")
-
-
-def run_drl(envs: ParallelEnv, config: TrainConfig):
     try:
         if envs.is_closed:
             envs.start()
-
-        ob_spec = envs.observation_spec
-        ac_spec = envs.action_spec
 
         checkpoint = None
         if config.load_model != "-1":
