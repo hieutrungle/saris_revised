@@ -245,7 +245,9 @@ class GAReflectorOptimizer:
             invalids += [self.toolbox.clone(invalids[0]) for _ in range(n_pad)]
             idxs += [idxs[0] for _ in range(n_pad)]
 
-        invalid_tensor = torch.tensor(list(invalids), dtype=torch.float32, device=self.envs.device)
+        invalid_tensor = torch.tensor(
+            np.array(list(invalids)), dtype=torch.float32, device=self.envs.device
+        )
         invalid_tensor = invalid_tensor.reshape(invalid_tensor.shape[0], 1, self.n_agents, 3)
         invalid_tensor = invalid_tensor.reshape(-1, self.n_envs, *invalid_tensor.shape[1:])
 
@@ -358,7 +360,7 @@ class GAReflectorOptimizer:
 
 def run_ga(envs: ParallelEnv, config: "TrainConfig"):
 
-    print(f"=" * 30 + "Genetic Algorithm" + "=" * 30)
+    print(f"=" * 30 + " Genetic Algorithm " + "=" * 30)
 
     focal_lows = envs.observation_spec["agents", "focals"].low[0, 0].detach().cpu()
     # focal_lows = torch.ones_like(focal_lows, device=config.device) * (-6.5)
