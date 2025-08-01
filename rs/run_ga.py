@@ -51,7 +51,7 @@ if not hasattr(creator, "FitnessMax"):
     creator.create("FitnessMax", base.Fitness, weights=(1.0,))
 
 if not hasattr(creator, "Individual"):
-    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax)
+    creator.create("Individual", np.ndarray, fitness=creator.FitnessMax, rssi=None)
 
 
 def make_random_ind(bounds: np.ndarray) -> "creator.Individual":
@@ -66,6 +66,7 @@ def make_random_ind(bounds: np.ndarray) -> "creator.Individual":
     # Create individual with proper fitness initialization
     individual = creator.Individual(sample)
     individual.fitness = creator.FitnessMax()
+    individual.rssi = None  # Initialize rssi to None
     return individual
 
 
@@ -139,39 +140,26 @@ class GAReflectorOptimizer:
 
     # ------------- GA primitives -----------------
     def _blend_cx(self, c1, c2, alpha=0.2):
-        # print(f"\nInitial c1: {c1}, c2: {c2}")
-        c1 = copy.deepcopy(c1)
-        c2 = copy.deepcopy(c2)
         gamma = np.random.uniform(-alpha, 1 + alpha, size=c1.shape)
         inv_g = 1.0 - gamma
-        child1 = inv_g * c1 + gamma * c2
-        child2 = gamma * c1 + inv_g * c2
-        # print(f"Before child1: {child1}, child2: {child2}")
-        np.clip(child1, self.low_bnd, self.high_bnd, out=child1)
-        np.clip(child2, self.low_bnd, self.high_bnd, out=child2)
-        # print(f"After child1: {child1}, child2: {child2}")
-        c1[:] = child1
-        c2[:] = child2
-        # print(f"Final c1: {c1}, c2: {c2}\n")
-        return copy.deepcopy(c1), copy.deepcopy(c2)
+        c1, c2 = inv_g * c1 + gamma * c2, inv_g * c2 + gamma * c1
+        np.clip(c1, self.low_bnd, self.high_bnd, out=c1)
+        np.clip(c2, self.low_bnd, self.high_bnd, out=c2)
+        return c1, c2
 
     def _gauss_mut(self, ind, sigma_ratio=0.1, indpb=0.20):
-        # print(f"\nBefore mutation: {ind}")
-        mutant = copy.deepcopy(ind)
+        mutant = ind
         mask = np.random.rand(*mutant.shape) < indpb
         widths = (self.high_bnd - self.low_bnd) * sigma_ratio
         mutant[mask] += np.random.normal(0.0, widths[mask])
         np.clip(mutant, self.low_bnd, self.high_bnd, out=mutant)
-        # print(f"After mutation: {mutant}")
-        return (copy.deepcopy(mutant),)
+        return (mutant,)
 
     # -----------------------------------------------------------------------
     def train(self, train_idx: int = 0) -> Tuple["creator.Individual", float]:
 
         self.pre_train_config()
-        pop, fits, rss, td = self.init_population()
-        # for ind in pop:
-        #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+        pop, td = self.init_population()
 
         # evolutionary loop --------------------------------------------------
         cxpb, mutpb = 0.7, 0.2
@@ -179,10 +167,10 @@ class GAReflectorOptimizer:
             # selection → variation
             offspring = list(map(self.toolbox.clone, self.toolbox.select(pop, len(pop))))
             offspring = [copy.deepcopy(o) for o in offspring]
-            self.perform_crossover_and_mutation(cxpb, mutpb, offspring)
+            offspring = self.perform_crossover_and_mutation(cxpb, mutpb, offspring)
 
             # re-evaluate new individuals
-            self.evaluate_invalid_individuals(rss, offspring)
+            self.evaluate_invalid_individuals(offspring)
 
             # pop = list(map(self.toolbox.clone, self.toolbox.select(offspring, len(pop))))
             pop[:] = copy.deepcopy(offspring)
@@ -194,34 +182,27 @@ class GAReflectorOptimizer:
             for k, v in rec.items():
                 self.hist[k].append(v)
 
-            # for ind, r in zip(pop, rss):
-            #     print(f"Individual: {ind}\nFitness: {ind.fitness.values}\nRSSI: {r}\n")
-            # print()
-            # print(f"generation {g}: {rec}")
-
             if g % 1 == 0:
+                print(f"G{g:03d}  avg={np.round(rec['mean'], 2)};  max={np.around(rec['max'], 2)};")
                 print(
-                    f"G{g:03d}  avg={np.round(rec['mean'], 2)};  max={np.around(rec['max'], 2)};  best={np.around(best.fitness.values, 2)}"
+                    f"\tbest RSSI: {np.round(best.rssi, 2)};  best fitness={np.around(best.fitness.values, 2)}"
                 )
 
             # Check for improvement and stop if no improvement
             current_best = -np.inf
-            for ind, r in zip(pop, rss):
+            for ind in pop:
                 if np.mean(ind.fitness.values) > np.mean(current_best):
                     current_best = ind.fitness.values
-                    current_best_rss = r
-            if not self.check_improvement(current_best, current_best_rss):
+            if not self.check_improvement(current_best):
                 break
-            print()
 
         print(f"Best focal-point: {best}")
-        print(f"Best RSSI values: {self.best_rss}")
+        print(f"Best RSSI values: {best.rssi}")
         print(f"RSSI values: {best.fitness.values}")
         # save the best individual, rssi, td, and history
         if self.config.checkpoint_dir != "-1":
             save_data = {
                 "best_focal_point": best,
-                # "best_rssi": self.best_rss,
                 "td": td,
                 "history": self.hist,
             }
@@ -229,7 +210,7 @@ class GAReflectorOptimizer:
             torch.save(save_data, save_path)
         return best, best.fitness.values[0]
 
-    def evaluate_invalid_individuals(self, rss, offspring):
+    def evaluate_invalid_individuals(self, offspring):
         invalids = []
         idxs = []
         for idx, ind in enumerate(offspring):
@@ -242,7 +223,7 @@ class GAReflectorOptimizer:
         n_invalid = len(invalids)
         if n_invalid % self.n_envs != 0:
             n_pad = self.n_envs - (n_invalid % self.n_envs)
-            invalids += [self.toolbox.clone(invalids[0]) for _ in range(n_pad)]
+            invalids += [copy.deepcopy(invalids[0]) for _ in range(n_pad)]
             idxs += [idxs[0] for _ in range(n_pad)]
 
         invalid_tensor = torch.tensor(
@@ -263,26 +244,23 @@ class GAReflectorOptimizer:
         # # evaluate invalids individuals
         for idx, ind, f, r in zip(idxs, invalids, invalid_fits, invalid_rss):
             ind.fitness.values = (f,)
-            rss[idx] = r
+            ind.rssi = r
 
     def perform_crossover_and_mutation(self, cxpb, mutpb, offspring):
 
-        # for o in offspring:
-        #     print(f"Offspring: {o}, Fitness: {o.fitness.values}")
         # crossover
-        for c1, c2 in zip(offspring[::2], offspring[1::2]):
+        for idx, (c1, c2) in enumerate(zip(offspring[::2], offspring[1::2])):
             if random.random() < cxpb:
                 self.toolbox.mate(c1, c2)
                 del c1.fitness.values, c2.fitness.values
 
         # mutation
-        for m in offspring:
+        for idx, m in enumerate(offspring):
             if random.random() < mutpb:
                 self.toolbox.mutate(m)
                 del m.fitness.values
 
-        # for o in offspring:
-        #     print(f"Offspring: {o}, Fitness: {o.fitness.values}")
+        return offspring
 
     def init_population(self) -> List[creator.Individual]:
         pop = self.toolbox.population(n=self.pop_size)
@@ -299,14 +277,10 @@ class GAReflectorOptimizer:
             fits.extend(f)
             rss.extend(r)
 
-        # fits = list(np.array(fits).flatten())
-        for ind, f in zip(pop, fits):
-            # print(f"Individual: {len(ind.fitness.weights)}, Fitness: {f}")
+        for ind, f, r in zip(pop, fits, rss):
             ind.fitness.values = (f,)
-            # print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
-        #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
-        # print()
-        return pop, fits, rss, td
+            ind.rssi = r
+        return pop, td
 
     def pre_train_config(self):
 
@@ -316,15 +290,13 @@ class GAReflectorOptimizer:
 
         # monitor the improve in the best fitness value
         self.best_fitness = -np.inf
-        self.best_rss = None
         self.no_improvement = 0
         self.max_no_improvement = 5  # number of generations without improvement before stopping
 
-    def check_improvement(self, current_fitness: np.ndarray, rss: List[float]) -> bool:
+    def check_improvement(self, current_fitness: np.ndarray) -> bool:
         """Check if the current fitness is better than the best fitness."""
         if np.mean(current_fitness) > np.mean(self.best_fitness):
             self.best_fitness = current_fitness
-            self.best_rss = rss
             self.no_improvement = 0
         else:
             self.no_improvement += 1
