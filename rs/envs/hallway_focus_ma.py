@@ -282,7 +282,7 @@ class HallwayFocusMA(EnvBase):
         self.init_agent_focals = self.focals.clone()
 
         # Assign rx to each agent
-        self.selected_loc_indices = [0, 1, 2]
+        self.selected_loc_indices = torch.arange(self.n_targets, device=self.device)
         self.target_pos = torch.tensor(
             [rx_positions[i] for i in self.selected_loc_indices],
             dtype=torch.float32,
