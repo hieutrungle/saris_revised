@@ -507,9 +507,10 @@ def run_drl(envs: ParallelEnv, config: TrainConfig):
         if checkpoint:
             print(f"Loading checkpoint from: {config.load_model}")
             policy.load_state_dict(checkpoint["policy"])
-            critic.load_state_dict(checkpoint["critic"])
-            loss_module.load_state_dict(checkpoint["loss_module"])
-            optim.load_state_dict(checkpoint["optimizer"])
+            if config.command.lower() == "train":
+                critic.load_state_dict(checkpoint["critic"])
+                loss_module.load_state_dict(checkpoint["loss_module"])
+                optim.load_state_dict(checkpoint["optimizer"])
 
         if config.command == "train":
             print("Training...")
