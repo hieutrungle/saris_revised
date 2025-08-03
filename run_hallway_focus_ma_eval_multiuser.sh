@@ -42,4 +42,8 @@ python ./main_1ue_ma.py --command "eval" --env_id "hallway_focus_ma" --checkpoin
 
 python ./main_1ue_ma.py --command "eval" --env_id "hallway_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/Hallway_L/hallway_focus_4_agents_eval --sionna_config_file $SOURCE_DIR/configs/hallway_focus_ma_4ue.yaml --source_dir $SOURCE_DIR --num_envs 4 --group "PPO_Hallway_L" --name "hallway_focus_4_ue" --ep_len 20 --image_dir $SOURCE_DIR/local_assets/Hallway_L/hallway_focus_4_agents_eval/images --wandb "offline" --load_model $SOURCE_DIR/local_assets/Hallway_L/hallway_focus_4_agents/checkpoint_187_agents.pt
 
+python ./main_1ue_ma.py --command "eval" --env_id "hallway_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_focus_2_agents_hex_eval --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_focus_ma_hex_2ue.yaml --source_dir $SOURCE_DIR --num_envs 4 --group "PPO_Hallway_L" --name "hallway_focus_2_agents_hex_eval" --ep_len 20 --image_dir $SOURCE_DIR/local_assets/hallway_focus_2_agents_hex_eval/images --wandb "offline" --load_model $SOURCE_DIR/local_assets/hallway_focus_2_agents/checkpoint_187.pt
+
+python ./main_1ue_ma.py --command "eval" --env_id "hallway_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_focus_4_agents_hex_eval --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_focus_ma_hex_4ue.yaml --source_dir $SOURCE_DIR --num_envs 4 --group "PPO_Hallway_L" --name "hallway_focus_4_agents_hex_eval" --ep_len 20 --image_dir $SOURCE_DIR/local_assets/hallway_focus_4_agents_hex_eval/images --wandb "offline" --load_model $SOURCE_DIR/local_assets/hallway_focus_4_agents/checkpoint_187.pt
+
 # --wandb "offline"  --ep_len 50 --frames_per_batch 10 --n_iters 1 --num_epochs 2 --minibatch_size 5
