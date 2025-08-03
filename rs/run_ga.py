@@ -203,6 +203,8 @@ class GAReflectorOptimizer:
         if self.config.checkpoint_dir != "-1":
             save_data = {
                 "best_focal_point": best,
+                "best_rssi": best.rssi,
+                "fitness": best.fitness.values,
                 "td": td,
                 "history": self.hist,
             }
