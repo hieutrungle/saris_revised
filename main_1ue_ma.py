@@ -148,7 +148,6 @@ class TrainConfig:
                 self.checkpoint_dir, "allocator_replay_buffer"
             )
         utils.mkdir_not_exists(self.checkpoint_dir)
-        utils.mkdir_not_exists(self.allocator_replay_buffer_dir)
 
         self.frames_per_batch = self.frames_per_batch * self.num_envs
         # self.total_frames: int = self.frames_per_batch * self.n_iters
@@ -161,88 +160,6 @@ class TrainConfig:
 
         device = pytorch_utils.init_gpu()
         self.device = device
-
-
-class PolicyGradientAllocationLoss(nn.Module):
-    """Policy gradient loss specifically for allocation tasks"""
-
-    def __init__(self, entropy_coeff=0.01, value_coeff=0.5):
-        super().__init__()
-        self.entropy_coeff = entropy_coeff
-        self.value_coeff = value_coeff
-
-    def forward(self, tensordict_data):
-        """Policy gradient loss with baseline
-        Args:
-            allocation_logits (torch.Tensor): Logits for allocation decisions, shape (batch_size, n_agents, n_targets)
-            advantages (torch.Tensor): Advantages for the actions taken, shape (batch_size, n_agents)
-            returns (torch.Tensor): Returns for the actions taken, shape (batch_size, n_agents)
-            values (torch.Tensor): State values predicted by the critic, shape (batch_size, n_agents, 1)
-        Returns:
-            dict: A dictionary containing the total loss, policy loss, entropy, and value loss
-        """
-        values = tensordict_data.get(("allocator", "state_value"))
-        advantages = tensordict_data.get(("next", "allocator", "advantage"))
-        returns = tensordict_data.get(("next", "allocator", "returns"))
-
-        new_allocation_logits = tensordict_data.get(("allocator", "new_allocation_logits"))
-        location_target_dist = torch.distributions.Independent(
-            base_distribution=torch.distributions.Categorical(logits=new_allocation_logits),
-            reinterpreted_batch_ndims=1,
-        )
-        selected_loc_indices = tensordict_data.get(("allocator", "selected_loc_indices"))
-        new_allocation_logprobs = location_target_dist.log_prob(selected_loc_indices)
-        new_allocation_logprobs = new_allocation_logprobs.unsqueeze(-1)
-
-        allocation_logprobs = tensordict_data.get(("allocator", "allocation_logprobs"))
-
-        logratio = new_allocation_logprobs - allocation_logprobs
-        ratio = logratio.exp()
-
-        # Policy gradient loss
-        pg_loss1 = -advantages * ratio
-        pg_loss2 = -advantages * torch.clamp(ratio, 1 - 0.2, 1 + 0.2)
-        policy_loss = torch.max(pg_loss1, pg_loss2).mean()
-
-        # Entropy bonus for exploration
-        entropy = -location_target_dist.entropy().mean()
-
-        # Value function loss
-        value_loss = F.mse_loss(values, returns)
-
-        # Total loss
-        total_loss = policy_loss - self.entropy_coeff * entropy + self.value_coeff * value_loss
-
-        return {
-            "total_loss": total_loss,
-            "policy_loss": policy_loss,
-            "entropy": entropy,
-            "value_loss": value_loss,
-        }
-
-
-def get_allocator_loss(loss_module, allocator, allocator_target, tensordict_data):
-    """Compute the loss for the allocator"""
-    # Get the state values from the allocator
-    allocator(tensordict_data)
-    allocator_target(tensordict_data)
-
-    # Get the rewards and dones
-    rewards = tensordict_data.get(("next", "allocator", "reward"))
-    # dones = tensordict_data.get(("next", "allocator", "done"))
-
-    # Get the state values
-    state_values = tensordict_data.get(("allocator", "state_value"))
-    target_state_values = tensordict_data.get(("next", "allocator", "state_value"))
-
-    # Compute advantages and returns
-    advantages = rewards + 0.98 * target_state_values - state_values
-    tensordict_data.set(("next", "allocator", "advantage"), advantages)
-    returns = advantages + state_values
-    tensordict_data.set(("next", "allocator", "returns"), returns)
-    # Compute the loss
-    loss_dict = loss_module(tensordict_data)
-    return loss_dict
 
 
 def wandb_init(config: TrainConfig) -> None:
