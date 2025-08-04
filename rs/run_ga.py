@@ -359,7 +359,7 @@ def run_ga(envs: ParallelEnv, config: "TrainConfig"):
             generations=20,
             seed=config.seed,
         )
-        epochs = config.total_epochs
+        epochs = config.total_episodes
         pbar = tqdm(total=epochs)
         for train_idx in range(epochs):
 
