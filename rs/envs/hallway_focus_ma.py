@@ -198,7 +198,8 @@ class HallwayFocusMA(EnvBase):
         Generate receiver positions by moving the original positions slightly within a defined range.
         This function modifies the receiver positions by moving them within a circle of radius 0.2m.
         """
-        r = 0.3  # radius of the circle to move the position
+        # r = 0.3  # radius of the circle to move the position
+        r = 0.05  # radius of the circle to move the position
         while True:
             random_angle = self.np_rng.uniform(0, 2 * np.pi)
             x = pos[0] + r * np.cos(random_angle)
@@ -295,7 +296,12 @@ class HallwayFocusMA(EnvBase):
         self.distances = self.distances.unsqueeze(0)  # Add batch dimension
         self.factors = torch.pow(self.distances, 2.2)
 
-        self.cur_rss = self._get_rss(self.focals)
+        if not self.eval_mode:
+            self.cur_rss = torch.zeros(
+                (1, self.n_agents, self.n_targets), dtype=torch.float32, device=self.device
+            )
+        else:
+            self.cur_rss = self._get_rss(self.focals)
         self.prev_rss = self.cur_rss.clone().detach()
 
         out = {
