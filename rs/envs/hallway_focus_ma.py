@@ -199,7 +199,7 @@ class HallwayFocusMA(EnvBase):
         This function modifies the receiver positions by moving them within a circle of radius 0.2m.
         """
         # r = 0.3  # radius of the circle to move the position
-        r = 0.05  # radius of the circle to move the position
+        r = 0.1  # radius of the circle to move the position
         while True:
             random_angle = self.np_rng.uniform(0, 2 * np.pi)
             x = pos[0] + r * np.cos(random_angle)
