@@ -296,7 +296,7 @@ class HallwayFocusMA(EnvBase):
         self.distances = self.distances.unsqueeze(0)  # Add batch dimension
         self.factors = torch.pow(self.distances, 2.2)
 
-        if not self.eval_mode:
+        if self.eval_mode:
             self.cur_rss = torch.zeros(
                 (1, self.n_agents, self.n_targets), dtype=torch.float32, device=self.device
             )

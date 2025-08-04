@@ -295,7 +295,12 @@ class HallwayColMA(EnvBase):
         self.distances = self.distances.unsqueeze(0)  # Add batch dimension
         self.factors = torch.pow(self.distances, 2.2)
 
-        self.cur_rss = self._get_rss(self.focals)
+        if self.eval_mode:
+            self.cur_rss = torch.zeros(
+                (1, self.n_agents, self.n_targets), dtype=torch.float32, device=self.device
+            )
+        else:
+            self.cur_rss = self._get_rss(self.focals)
         self.prev_rss = self.cur_rss.clone().detach()
 
         out = {
