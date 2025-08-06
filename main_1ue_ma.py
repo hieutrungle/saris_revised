@@ -220,7 +220,7 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
             results = torch.load(config.drl_eval_results_dir, weights_only=False)
             target_pos = results["agents", "target_pos"]
             rx_positions = target_pos[0, 0, :, :3, :]
-            rx_positions = rx_positions[::20, ...]
+            rx_positions = rx_positions[:: config.ep_len, ...]
             env_kwargs["rx_positions"] = rx_positions
 
         if config.command.lower() == "eval":
