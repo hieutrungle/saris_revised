@@ -84,6 +84,7 @@ class HallwayFocusMA(EnvBase):
         no_compatibility_scores: bool = False,
         num_runs_before_restart: int = 10,
         eval_mode: bool = False,
+        is_sa=False,
     ):
 
         super().__init__(device=device, batch_size=[1])
@@ -102,6 +103,7 @@ class HallwayFocusMA(EnvBase):
         self.no_allocator = no_allocator
         self.no_compatibility_scores = no_compatibility_scores
         self.n_targets = len(sionna_config["rx_positions"])
+        self.is_sa = is_sa
 
         # Init focal points
         self.init_focals = torch.tensor(
@@ -425,6 +427,11 @@ class HallwayFocusMA(EnvBase):
         w2 = 0.1
         rfs_diff = rfs - prev_rfs
         agents_reward = 1 / 30 * (w1 * rfs + w2 * rfs_diff)
+        if self.is_sa:
+            # For single-agent, we return the mean reward across all agents
+            agents_reward = agents_reward.mean(dim=-2, keepdim=True)
+            # expand to match the shape of (1, n_agents, 1)
+            agents_reward = agents_reward.expand(1, self.n_agents, 1)
         return {"agents_reward": agents_reward}
 
     def _make_spec(self):

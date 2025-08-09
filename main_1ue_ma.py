@@ -226,6 +226,8 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
         if config.command.lower() == "eval":
             env_kwargs["eval_mode"] = True
             env_kwargs["seed"] = config.eval_seed
+        if config.algo.lower() == "sa":
+            env_kwargs["is_sa"] = True
 
         if config.env_id.lower() not in ENV_IDS:
             raise ValueError(f"Unknown environment id: {config.env_id}")
@@ -299,7 +301,7 @@ def main(config: TrainConfig):
     if loc is None and scale is None:
         envs.transform[0].init_stats(num_iter=config.ep_len * 3, reduce_dim=(0, 1, 2), cat_dim=1)
 
-    if config.algo.lower() == "drl":
+    if config.algo.lower() == "drl" or config.algo.lower() == "sa":
         run_drl(envs, config)
     elif config.algo.lower() == "ga":
         run_ga(envs, config)
@@ -321,14 +323,25 @@ def run_drl(envs: ParallelEnv, config: TrainConfig):
             print(f"Loaded checkpoint from {config.load_model}")
 
         n_agents = list(envs.n_agents)[0]
-        shared_parameters_policy = False
+
+        if config.algo.lower() == "sa":
+            shared_parameters_policy = True
+            share_parameters_critic = True
+            is_single_agent = True
+            mappo = True
+        else:
+            shared_parameters_policy = False
+            share_parameters_critic = False
+            is_single_agent = False
+            mappo = True
+
         policy_net = torch.nn.Sequential(
             MultiAgentMLP(
                 # n_obs_per_agent
                 n_agent_inputs=ob_spec["agents", "observation"].shape[-1],
                 n_agent_outputs=2 * ac_spec.shape[-1],  # 2 * n_actions_per_agents
                 n_agents=n_agents,
-                centralised=False,
+                centralised=is_single_agent,
                 share_params=shared_parameters_policy,
                 device=config.device,
                 depth=2,
@@ -357,8 +370,6 @@ def run_drl(envs: ParallelEnv, config: TrainConfig):
             return_log_prob=True,
         )  # we'll need the log-prob for the PPO loss
 
-        share_parameters_critic = False
-        mappo = True
         critic_net = MultiAgentMLP(
             n_agent_inputs=ob_spec["agents", "observation"].shape[-1],
             n_agent_outputs=1,  # 1 value per agent
