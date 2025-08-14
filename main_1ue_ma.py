@@ -309,6 +309,67 @@ def main(config: TrainConfig):
         raise ValueError(f"Unknown algorithm: {config.algo}. Supported: 'drl', 'ga'.")
 
 
+class SAPolicy(nn.Module):
+    """Single Agent Policy class for the single agent RL algorithm."""
+
+    def __init__(self, ob_dim, ac_dim, n_agents, device):
+        super(SAPolicy, self).__init__()
+        self.device = device
+        self._in_dim = ob_dim * n_agents
+        self._out_dim = ac_dim * n_agents * 2
+        self._n_agents = n_agents
+        self._ac_dim = ac_dim
+        self.policy = torch.nn.Sequential(
+            nn.Linear(self._in_dim, 256, device=self.device),
+            nn.ReLU6(),
+            nn.Linear(256, 256, device=self.device),
+            nn.ReLU6(),
+            nn.Linear(256, self._out_dim, device=self.device),
+        )
+
+    def forward(self, obs: TensorDict) -> TensorDict:
+        """Forward pass through the policy."""
+        shape = obs.shape
+        obs = obs.view(*shape[:-2], -1)
+        obs = obs.to(self.device)
+        obs = obs.float()  # ensure the observation is in float format
+        acs = self.policy(obs)
+        acs = acs.view(*shape[:-2], self._n_agents, self._ac_dim * 2)
+        return acs
+
+
+class SACritic(nn.Module):
+    """Single Agent Critic class for the single agent RL algorithm."""
+
+    def __init__(self, ob_dim, n_agents, device):
+        super(SACritic, self).__init__()
+        self.device = device
+        self._in_dim = ob_dim * n_agents
+        self._n_agents = n_agents
+        self._out_dim = 1
+        self.critic = torch.nn.Sequential(
+            nn.Linear(self._in_dim, 256, device=self.device),
+            nn.ReLU6(),
+            nn.Linear(256, 256, device=self.device),
+            nn.ReLU6(),
+            nn.Linear(256, self._out_dim, device=self.device),
+        )
+
+    def forward(self, obs: TensorDict) -> TensorDict:
+        """Forward pass through the critic."""
+        shape = obs.shape
+        # combine the last two dimensions
+        obs = obs.view(*shape[:-2], -1)
+        obs = obs.to(self.device)
+        obs = obs.float()  # ensure the observation is in float format
+        values = self.critic(obs)
+        values = values.view(*shape[:-2], 1, 1)  # reshape to match the original shape
+        # expand to match the shape of (1, n_agents, 1)
+        values = values.expand(*shape[:-2], self._n_agents, 1)
+
+        return values
+
+
 def run_drl(envs: ParallelEnv, config: TrainConfig):
     try:
         if envs.is_closed:
@@ -329,27 +390,67 @@ def run_drl(envs: ParallelEnv, config: TrainConfig):
             share_parameters_critic = True
             is_single_agent = True
             mappo = True
+
+            policy_net = torch.nn.Sequential(
+                SAPolicy(
+                    ob_dim=ob_spec["agents", "observation"].shape[-1],
+                    ac_dim=ac_spec.shape[-1],
+                    n_agents=n_agents,
+                    device=config.device,
+                ),
+                NormalParamExtractor(),
+            )
+            summary(
+                policy_net,
+                input_size=ob_spec["agents", "observation"].shape,
+                col_names=["input_size", "output_size", "num_params"],
+                device=config.device,
+            )
+            critic_net = SACritic(
+                ob_dim=ob_spec["agents", "observation"].shape[-1],
+                n_agents=n_agents,
+                device=config.device,
+            )
+
+            summary(
+                critic_net,
+                input_size=ob_spec["agents", "observation"].shape,
+                col_names=["input_size", "output_size", "num_params"],
+                device=config.device,
+            )
+
         else:
             shared_parameters_policy = False
             share_parameters_critic = False
             is_single_agent = False
             mappo = True
 
-        policy_net = torch.nn.Sequential(
-            MultiAgentMLP(
-                # n_obs_per_agent
+            policy_net = torch.nn.Sequential(
+                MultiAgentMLP(
+                    # n_obs_per_agent
+                    n_agent_inputs=ob_spec["agents", "observation"].shape[-1],
+                    n_agent_outputs=2 * ac_spec.shape[-1],  # 2 * n_actions_per_agents
+                    n_agents=n_agents,
+                    centralised=is_single_agent,
+                    share_params=shared_parameters_policy,
+                    device=config.device,
+                    depth=2,
+                    num_cells=256,
+                    activation_class=torch.nn.ReLU6,
+                ),
+                NormalParamExtractor(),
+            )
+            critic_net = MultiAgentMLP(
                 n_agent_inputs=ob_spec["agents", "observation"].shape[-1],
-                n_agent_outputs=2 * ac_spec.shape[-1],  # 2 * n_actions_per_agents
+                n_agent_outputs=1,  # 1 value per agent
                 n_agents=n_agents,
-                centralised=is_single_agent,
-                share_params=shared_parameters_policy,
+                centralised=mappo,
+                share_params=share_parameters_critic,
                 device=config.device,
                 depth=2,
                 num_cells=256,
-                activation_class=torch.nn.ReLU6,
-            ),
-            NormalParamExtractor(),
-        )
+                activation_class=torch.nn.Tanh,
+            )
 
         policy_module = TensorDictModule(
             policy_net,
@@ -369,18 +470,6 @@ def run_drl(envs: ParallelEnv, config: TrainConfig):
             },
             return_log_prob=True,
         )  # we'll need the log-prob for the PPO loss
-
-        critic_net = MultiAgentMLP(
-            n_agent_inputs=ob_spec["agents", "observation"].shape[-1],
-            n_agent_outputs=1,  # 1 value per agent
-            n_agents=n_agents,
-            centralised=mappo,
-            share_params=share_parameters_critic,
-            device=config.device,
-            depth=2,
-            num_cells=256,
-            activation_class=torch.nn.Tanh,
-        )
 
         critic = TensorDictModule(
             module=critic_net,
