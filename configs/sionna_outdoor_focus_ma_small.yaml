@@ -26,7 +26,7 @@ rf_positions:
     ]
 
 # Transmitter and receiver parameters
-tx_power_dbm: 15.0
+tx_power_dbm: 18.0
 tx_num_rows: 1
 tx_num_cols: 1
 tx_vertical_spacing: 0.5
