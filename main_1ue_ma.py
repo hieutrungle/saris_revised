@@ -273,13 +273,13 @@ def main(config: TrainConfig):
     loc = torch.zeros(observation_shape, device=config.device)
     scale = torch.ones(observation_shape, device=config.device)
     if config.env_id.lower() == "outdoor_focus_ma":
-        scale[..., 0] = scale[..., 0] * 40.0  # rx x position
+        scale[..., 0] = scale[..., 0] * 30.0  # rx x position
         scale[..., 1] = scale[..., 1] * 30.0  # rx y position
         scale[..., 2] = scale[..., 2] * 2.0  # rx z position
         scale[..., 3] = scale[..., 3] * 96.0  # rf x position
         scale[..., 4] = scale[..., 4] * 46.0  # rf y position
         scale[..., 5] = scale[..., 5] * 9.0  # rf z position
-        scale[..., 6] = scale[..., 6] * 29.0  # focal x position
+        scale[..., 6] = scale[..., 6] * 25.0  # focal x position
         scale[..., 7] = scale[..., 7] * 50.0  # focal y position
         scale[..., 8] = scale[..., 8] * 5.0  # focal z position
     else:
