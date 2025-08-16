@@ -41,4 +41,5 @@ echo -e Assets directory: $ASSETS_DIR '\n'
 TMP_DIR=${SOURCE_DIR}/tmp
 export OPTIX_CACHE_PATH=${TMP_DIR}/optix_cache
 mkdir -p ${OPTIX_CACHE_PATH}
-python ./main_1ue_ma.py --command "train" --env_id "outdoor_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/outdoor_focus_small --sionna_config_file $SOURCE_DIR/configs/sionna_outdoor_focus_ma_small.yaml --source_dir $SOURCE_DIR --num_envs 1 --group "PPO_Hallway_L" --name "outdoor_focus_small" --wandb "offline"  --ep_len 4 --frames_per_batch 4 --n_iters 1 --num_epochs 2 --minibatch_size 4 --eval_seed 121
+python ./main_1ue_ma.py --command "train" --env_id "outdoor_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/outdoor_focus_small --sionna_config_file $SOURCE_DIR/configs/sionna_outdoor_focus_ma_small.yaml --source_dir $SOURCE_DIR --num_envs 1 --group "PPO_Hallway_L" --name "outdoor_focus_small" --track_wandb False
+# --wandb "offline"  --ep_len 4 --frames_per_batch 4 --n_iters 1 --num_epochs 2 --minibatch_size 4 --eval_seed 121
