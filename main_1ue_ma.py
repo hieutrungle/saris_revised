@@ -216,6 +216,9 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
             "no_compatibility_scores": config.no_compatibility_scores,
         }
 
+        if config.env_id.lower() == "outdoor_focus_ma":
+            sionna_config["viz_same_scene"] = True
+
         if config.algo.lower() == "ga":
             results = torch.load(config.drl_eval_results_dir, weights_only=False)
             target_pos = results["agents", "target_pos"]

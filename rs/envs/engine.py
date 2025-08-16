@@ -37,6 +37,7 @@ from sionna.rt import (
 import sionna.rt
 from rs.utils import utils
 from typing import Optional, Tuple
+import drjit as dr
 
 tf.get_logger().setLevel("ERROR")
 
@@ -300,18 +301,21 @@ class SignalCoverage:
 
         self.rendering = sionna_config.get("rendering", False)
         if self.rendering:
-            self.viz_scene_path = self.sionna_config["viz_scene_path"]
-            self.viz_scene = load_scene(self.viz_scene_path, merge_shapes=True)
-            # self.viz_scene.add(wood_mat)
-            wood_mat = sionna.rt.ITURadioMaterial(
-                name="wood3", itu_type="wood", thickness=0.2, color=[0.8, 0.0, 0.05]
-            )
-            for o in self.viz_scene.objects:
-                obj = self.viz_scene.get(o)
-                if "wood" in obj.radio_material.name:
-                    obj.radio_material = wood_mat
-            # self.viz_scene.remove("itu_wood")
-            self.__prepare_radio_devices(self.viz_scene)
+            if sionna_config.get("viz_same_scene", False):
+                self.viz_scene_path = self.compute_scene_path
+                self.viz_scene = self.compute_scene
+            else:
+                self.viz_scene_path = self.sionna_config["viz_scene_path"]
+                self.viz_scene = load_scene(self.viz_scene_path, merge_shapes=True)
+                # self.viz_scene.add(wood_mat)
+                wood_mat = sionna.rt.ITURadioMaterial(
+                    name="wood3", itu_type="wood", thickness=0.2, color=[0.8, 0.0, 0.05]
+                )
+                for o in self.viz_scene.objects:
+                    obj = self.viz_scene.get(o)
+                    if "wood" in obj.radio_material.name:
+                        obj.radio_material = wood_mat
+                self.__prepare_radio_devices(self.viz_scene)
 
         self.rx_pos = np.array(self.sionna_config["rx_positions"], dtype=np.float32)
         self.rf_pos = np.array(self.sionna_config["rf_positions"], dtype=np.float32)
@@ -343,7 +347,7 @@ class SignalCoverage:
                 look_at=rf_pos,
                 power_dbm=self.sionna_config["tx_power_dbm"],
                 color=[0.05, 0.05, 0.9],
-                display_radius=0.3,
+                display_radius=self.sionna_config.get("display_radius", 0.3),
             )
             scene.add(tx)
 
@@ -363,8 +367,8 @@ class SignalCoverage:
                 name=f"rx_{i}",
                 position=rx_pos,
                 orientation=rx_orient,
-                color=[0.99, 0.01, 0.99],
-                display_radius=0.3,
+                color=self.sionna_config.get("rx_color", [0.99, 0.01, 0.99]),
+                display_radius=self.sionna_config.get("display_radius", 0.3),
             )
             scene.add(rx)
 
@@ -391,6 +395,7 @@ class SignalCoverage:
             cm_kwargs.update(kwargs)
         rm_solver = RadioMapSolver()
         cmap = rm_solver(**cm_kwargs)
+        cmap._pathgain_map = dr.clip(cmap._pathgain_map, 1e-20, 5)
         return cmap
 
     def compute_paths(self, **kwargs) -> Paths:
@@ -450,162 +455,3 @@ class SignalCoverage:
             rm_show_color_bar=True,
         )
         self.viz_scene.render(**render_config)
-
-
-# class SignalCoverage:
-#     def __init__(self, sionna_config: dict, seed: Optional[int] = None):
-
-#         self.sionna_config = sionna_config
-#         self.seed = seed
-#         self.image_dir = self.sionna_config["image_dir"]
-
-#         self.cam = None
-#         self.__prepare_camera()
-
-#         self.compute_scene_path = self.sionna_config["compute_scene_path"]
-#         self.compute_scene = load_scene(self.compute_scene_path, merge_shapes=True)
-#         self.__prepare_radio_devices(self.compute_scene)
-
-#         self.rendering = sionna_config.get("rendering", False)
-#         if self.rendering:
-#             self.viz_scene_path = self.sionna_config["viz_scene_path"]
-#             self.viz_scene = load_scene(self.viz_scene_path, merge_shapes=True)
-#             self.__prepare_radio_devices(self.viz_scene)
-
-#         self.rx_pos = np.array(self.sionna_config["rx_positions"], dtype=np.float32)
-#         self.rf_pos = np.array(self.sionna_config["rf_positions"], dtype=np.float32)
-#         self.tx_pos = np.array(self.sionna_config["tx_positions"], dtype=np.float32)
-
-#         self.num_rx = len(self.rx_pos)
-#         self.num_rf = len(self.rf_pos)
-#         self.num_tx = len(self.tx_pos)
-
-#     def __prepare_radio_devices(self, scene: Scene):
-#         # in Hz; implicitly updates RadioMaterials
-#         scene.frequency = self.sionna_config["frequency"]
-
-#         # Device Setup
-#         scene.tx_array = PlanarArray(
-#             num_rows=self.sionna_config["tx_num_rows"],
-#             num_cols=self.sionna_config["tx_num_cols"],
-#             vertical_spacing=self.sionna_config["tx_vertical_spacing"],
-#             horizontal_spacing=self.sionna_config["tx_horizontal_spacing"],
-#             pattern=self.sionna_config["tx_pattern"],
-#             polarization=self.sionna_config["tx_polarization"],
-#         )
-#         for i, (tx_pos, rf_pos) in enumerate(
-#             zip(self.sionna_config["tx_positions"], self.sionna_config["rf_positions"])
-#         ):
-#             tx = Transmitter(
-#                 name=f"tx_{i}",
-#                 position=tx_pos,
-#                 look_at=rf_pos,
-#                 power_dbm=self.sionna_config["tx_power_dbm"],
-#                 color=[0.05, 0.05, 0.9],
-#                 display_radius=0.5,
-#             )
-#             scene.add(tx)
-
-#         scene.rx_array = PlanarArray(
-#             num_rows=self.sionna_config["rx_num_rows"],
-#             num_cols=self.sionna_config["rx_num_cols"],
-#             vertical_spacing=self.sionna_config["rx_vertical_spacing"],
-#             horizontal_spacing=self.sionna_config["rx_horizontal_spacing"],
-#             pattern=self.sionna_config["rx_pattern"],
-#             polarization=self.sionna_config["rx_polarization"],
-#         )
-
-#         for i, (rx_pos, rx_orient) in enumerate(
-#             zip(self.sionna_config["rx_positions"], self.sionna_config["rx_orientations"])
-#         ):
-#             rx = Receiver(
-#                 name=f"rx_{i}",
-#                 position=rx_pos,
-#                 orientation=rx_orient,
-#                 color=[0.99, 0.01, 0.99],
-#                 display_radius=0.5,
-#             )
-#             scene.add(rx)
-
-#     def __prepare_camera(self):
-#         self.cam = Camera(
-#             position=self.sionna_config["cam_position"],
-#             look_at=self.sionna_config["cam_look_at"],
-#         )
-#         self.cam.look_at(self.sionna_config["cam_look_at"])
-
-#     def compute_cmap(self, **kwargs) -> RadioMap:
-#         cm_kwargs = dict(
-#             scene=self.compute_scene,
-#             cell_size=self.sionna_config["rm_cell_size"],
-#             max_depth=self.sionna_config["rm_max_depth"],
-#             samples_per_tx=int(self.sionna_config["rm_num_samples"]),
-#             diffuse_reflection=self.sionna_config["rm_diffuse_reflection"],
-#             # stop_threshold=self.sionna_config["rm_stop_threshold"],
-#             rr_depth=self.sionna_config["rm_rr_depth"],
-#         )
-#         if self.seed:
-#             cm_kwargs["seed"] = self.seed
-#         if kwargs:
-#             cm_kwargs.update(kwargs)
-#         rm_solver = RadioMapSolver()
-#         cmap = rm_solver(**cm_kwargs)
-#         return cmap
-
-#     def compute_paths(self, **kwargs) -> Paths:
-#         paths_kwargs = dict(
-#             scene=self.compute_scene,
-#             max_depth=self.sionna_config["path_max_depth"],
-#             samples_per_src=int(self.sionna_config["path_num_samples"]),
-#             diffuse_reflection=self.sionna_config["diffuse_reflection"],
-#             synthetic_array=self.sionna_config["synthetic_array"],
-#         )
-#         if self.seed:
-#             paths_kwargs["seed"] = self.seed
-#         if kwargs:
-#             paths_kwargs.update(kwargs)
-#         p_solver = PathSolver()
-#         paths = p_solver(**paths_kwargs)
-#         return paths
-
-#     def render_to_file(
-#         self, radio_map: RadioMap = None, paths: Paths = None, filename: Optional[str] = None
-#     ) -> None:
-#         if not self.rendering:
-#             raise RuntimeError("Rendering is not enabled in the configuration.")
-
-#         if filename is None:
-#             render_filename = utils.create_filename(
-#                 self.image_dir, f"{self.sionna_config['mitsuba_filename']}_00000.png"
-#             )
-#         else:
-#             render_filename = filename
-#         render_config = dict(
-#             camera=self.cam,
-#             paths=paths,
-#             filename=render_filename,
-#             radio_map=radio_map,
-#             rm_metric="rss",
-#             rm_vmin=self.sionna_config["rm_vmin"],
-#             rm_vmax=self.sionna_config["rm_vmax"],
-#             resolution=self.sionna_config["resolution"],
-#             show_devices=True,
-#         )
-#         self.viz_scene.render_to_file(**render_config)
-
-#     def render(self, radio_map: RadioMap = None, paths: Paths = None) -> None:
-#         if not self.rendering:
-#             raise RuntimeError("Rendering is not enabled in the configuration.")
-
-#         render_config = dict(
-#             camera=self.cam,
-#             paths=paths,
-#             radio_map=radio_map,
-#             rm_metric="rss",
-#             rm_vmin=self.sionna_config["rm_vmin"],
-#             rm_vmax=self.sionna_config["rm_vmax"],
-#             resolution=self.sionna_config["resolution"],
-#             show_devices=True,
-#             rm_show_color_bar=True,
-#         )
-#         self.viz_scene.render(**render_config)
