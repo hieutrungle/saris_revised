@@ -85,6 +85,7 @@ class HallwayFocusMA(EnvBase):
         num_runs_before_restart: int = 10,
         eval_mode: bool = False,
         is_sa=False,
+        target_noise: float = 0.0,
     ):
 
         super().__init__(device=device, batch_size=[1])
@@ -104,6 +105,7 @@ class HallwayFocusMA(EnvBase):
         self.no_compatibility_scores = no_compatibility_scores
         self.n_targets = len(sionna_config["rx_positions"])
         self.is_sa = is_sa
+        self.target_noise = target_noise
 
         # Init focal points
         self.init_focals = torch.tensor(
@@ -247,6 +249,8 @@ class HallwayFocusMA(EnvBase):
         """Get current state representation for all agents"""
         agent_pos = self.agent_pos.clone().detach()
         target_pos = self.target_pos.clone().detach()
+        target_noise = torch.randn_like(target_pos) * self.target_noise
+        target_pos = target_pos + target_noise
         focals = self.focals.clone().detach()
         observation = torch.cat([target_pos, agent_pos, focals], dim=-1)
         tensordict["agents", "observation"] = observation

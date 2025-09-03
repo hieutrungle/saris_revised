@@ -103,6 +103,9 @@ class TrainConfig:
     num_envs: int = 3  # the number of parallel environments
     ep_len: int = 50  # the maximum length of an episode
     eval_ep_len: int = 50  # the maximum length of an episode
+    target_noise: float = (
+        0.0  # standard deviation of the noise added to the target positions during training
+    )
 
     # Sampling
     frames_per_batch: int = 200  # Number of team frames collected per training iteration
@@ -214,6 +217,7 @@ def make_env(config: TrainConfig, idx: int) -> Callable:
             "random_assignment": config.random_assignment,
             "no_allocator": config.no_allocator,
             "no_compatibility_scores": config.no_compatibility_scores,
+            "target_noise": config.target_noise,
         }
 
         if config.env_id.lower() == "outdoor_focus_ma":
