@@ -41,5 +41,5 @@ echo -e Assets directory: $ASSETS_DIR '\n'
 TMP_DIR=${SOURCE_DIR}/tmp
 export OPTIX_CACHE_PATH=${TMP_DIR}/optix_cache
 mkdir -p ${OPTIX_CACHE_PATH}
-python ./main_1ue_ma.py --command "train" --env_id "hallway_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_focus_noise-0_1 --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_focus_ma.yaml --source_dir $SOURCE_DIR --num_envs 5 --group "PPO_Hallway_L" --name "hallway_focus_noise-0_1" --target_noise 0.1
+python ./main_1ue_ma.py --command "train" --env_id "hallway_focus_ma" --checkpoint_dir $SOURCE_DIR/local_assets/hallway_focus_noise-0_1 --sionna_config_file $SOURCE_DIR/configs/sionna_hallway_focus_ma.yaml --source_dir $SOURCE_DIR --num_envs 5 --group "PPO_Hallway_L" --name "hallway_focus_noise-0_1" --track_wandb False --target_noise 0.1
 #  --wandb "offline"  --ep_len 50 --frames_per_batch 10 --n_iters 1 --num_epochs 2 --minibatch_size 5 
